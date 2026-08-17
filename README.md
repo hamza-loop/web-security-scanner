@@ -10,17 +10,10 @@ The scanner will gradually include reconnaissance, security checks, risk assessm
 
 ## Current Features
 
-- HTTP reconnaissance
-- URL normalization
-- HTTP status code detection
-- Response header analysis
-- Security header analysis
-- Cookie analysis
-- Redirect handling
-- Command-line interface
-- JSON output
-- Report generation
-- Modular project architecture
+- Project structure initialized
+- Git version control
+- Python virtual environment
+- Basic project documentation
 
 ## Planned Features
 
@@ -37,19 +30,3 @@ The scanner will gradually include reconnaissance, security checks, risk assessm
 - Automated tests
 - CI/CD
 - AI-assisted security analysis
-
-## Project Structure
-
-```text
-web-security-scanner/
-├── main.py
-├── scanner.py
-├── headers.py
-├── reporter.py
-├── utils.py
-├── tests/
-├── reports/
-├── requirements.txt
-├── README.md
-├── .gitignore
-└── LICENSE
