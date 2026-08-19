@@ -1,10 +1,25 @@
 import argparse
+
 from scanner import scan_url
+from headers import check_security_headers
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
+
 parser.add_argument("url", help="Target URL")
-parser.add_argument("--method", choices=["GET", "HEAD"], default="GET", help="HTTP method to use")
-parser.add_argument("--timeout", type=int, default=10, help="Request timeout in seconds")
+
+parser.add_argument(
+    "--method",
+    choices=["GET", "HEAD"],
+    default="GET",
+    help="HTTP method to use"
+)
+
+parser.add_argument(
+    "--timeout",
+    type=int,
+    default=10,
+    help="Request timeout in seconds"
+)
 
 args = parser.parse_args()
 
@@ -17,7 +32,10 @@ result = scan_url(
 if "error" in result:
     print("[-] Request failed:", result["error"])
 else:
+    security_headers = check_security_headers(result["headers"])
+
     print("\n[+] Scan Result")
+
     print("    - URL:", result["url"])
     print("    - Method:", result["method"])
     print("    - Status:", result["status_code"])
@@ -25,3 +43,8 @@ else:
     print("    - Content Type:", result["content_type"])
     print("    - Redirects:", result["redirects"])
     print("    - Response Size:", result["response_size"])
+
+    print("\n[+] Security Headers")
+
+    for header, details in security_headers.items():
+        print(f"    - {header}: {details['status']}")
