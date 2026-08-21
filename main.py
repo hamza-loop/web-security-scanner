@@ -1,8 +1,11 @@
 import argparse
+from urllib.parse import urlparse
 
 from scanner import scan_url
 from headers import check_security_headers
 from cookies import check_cookie_security
+from tls import analyze_tls
+
 
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
@@ -37,6 +40,12 @@ else:
     security_headers = check_security_headers(result["headers"])
     cookies = check_cookie_security(result["headers"])
 
+    parsed_url = urlparse(result["url"])
+    tls_analysis = None
+
+    if parsed_url.scheme == "https":
+        tls_analysis = analyze_tls(parsed_url.hostname)
+
     print("\n[+] Scan Result")
 
     print("    - URL:", result["url"])
@@ -52,13 +61,26 @@ else:
     for header, details in security_headers.items():
         print(f"    - {header}: {details['status']}")
 
-print("\n[+] Cookie Security")
+    print("\n[+] Cookie Security")
 
-if cookies:
-    for cookie in cookies:
-        print(f"    - {cookie['name']}:")
-        print(f"        Secure: {'Present' if cookie['secure'] else 'Missing'}")
-        print(f"        HttpOnly: {'Present' if cookie['httponly'] else 'Missing'}")
-        print(f"        SameSite: {cookie['samesite'] or 'Missing'}")
-else:
-    print("    - No cookies found")
+    if cookies:
+        for cookie in cookies:
+            print(f"    - {cookie['name']}:")
+            print(f"        Secure: {'Present' if cookie['secure'] else 'Missing'}")
+            print(f"        HttpOnly: {'Present' if cookie['httponly'] else 'Missing'}")
+            print(f"        SameSite: {cookie['samesite'] or 'Missing'}")
+    else:
+        print("    - No cookies found")
+
+    if tls_analysis:
+        print("\n[+] TLS Security")
+
+        if tls_analysis["status"] == "success":
+            print(f"    - TLS Version: {tls_analysis['tls_version']}")
+            print(f"    - Certificate Valid: {tls_analysis['certificate_valid']}")
+            print(f"    - Hostname Valid: {tls_analysis['hostname_valid']}")
+            print(f"    - Valid Until: {tls_analysis['valid_until']}")
+        else:
+            print(f"    - Status: {tls_analysis['status']}")
+            print(f"    - Error Type: {tls_analysis['error_type']}")
+            print(f"    - Error: {tls_analysis['error']}")
