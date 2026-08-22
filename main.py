@@ -6,6 +6,7 @@ from headers import check_security_headers
 from cookies import check_cookie_security
 from tls import analyze_tls
 from redirects import analyze_redirects
+from methods import analyze_methods
 
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
@@ -40,6 +41,7 @@ else:
     security_headers = check_security_headers(result["headers"])
     cookies = check_cookie_security(result["headers"])
     redirect_results = analyze_redirects(result)
+    method_results = analyze_methods(result["url"], args.timeout)
 
     parsed_url = urlparse(result["url"])
     tls_analysis = None
@@ -67,6 +69,23 @@ else:
 
     for header, details in security_headers.items():
         print(f"    - {header}: {details['status']}")
+
+    print("\n[+] HTTP Method Security")
+
+    if method_results["status"] == "success":
+        print(f"    - Allow Header: {method_results['allow_header'] or 'Not disclosed'}")
+
+        print("    - Allowed Methods:")
+        for method in method_results["allowed_methods"]:
+            print(f"        {method}")
+
+        print("    - Method Tests:")
+        for method, details in method_results["method_tests"].items():
+            status = "Allowed" if details["allowed"] else "Blocked"
+            print(f"        {method}: {details['status_code']} ({status})")
+    else:
+        print(f"    - Status: {method_results['status']}")
+        print(f"    - Error: {method_results['error']}")
 
     print("\n[+] Cookie Security")
 
