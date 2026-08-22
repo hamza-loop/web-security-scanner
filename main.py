@@ -5,7 +5,7 @@ from scanner import scan_url
 from headers import check_security_headers
 from cookies import check_cookie_security
 from tls import analyze_tls
-
+from redirects import analyze_redirects
 
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
@@ -39,6 +39,7 @@ if "error" in result:
 else:
     security_headers = check_security_headers(result["headers"])
     cookies = check_cookie_security(result["headers"])
+    redirect_results = analyze_redirects(result)
 
     parsed_url = urlparse(result["url"])
     tls_analysis = None
@@ -55,6 +56,12 @@ else:
     print("    - Content Type:", result["content_type"])
     print("    - Redirects:", result["redirects"])
     print("    - Response Size:", result["response_size"])
+
+    print("\n[+] Redirect Security")
+    print(f"    - Redirect Count: {redirect_results.get('redirect_count')}")
+    print(f"    - Original Scheme: {redirect_results.get('original_scheme')}")
+    print(f"    - Final Scheme: {redirect_results.get('final_scheme')}")
+    print(f"    - Security Status: {redirect_results.get('security_status')}")
 
     print("\n[+] Security Headers")
 

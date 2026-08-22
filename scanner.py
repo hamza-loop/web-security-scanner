@@ -6,7 +6,7 @@ def scan_url(url, method="GET", timeout=10):
             "User-Agent": "Hamza-Security-Scanner/1.0"
         }
 
-        response = requests.request(method,url, headers=headers, timeout=timeout)
+        response = requests.request(method, url, headers=headers, timeout=timeout)
 
         return {
             "url": response.url,
@@ -16,9 +16,16 @@ def scan_url(url, method="GET", timeout=10):
             "content_type": response.headers.get("Content-Type", "unknown"),
             "redirects": len(response.history),
             "response_size": len(response.content),
-            "headers": dict(response.headers)
+            "headers": dict(response.headers),
+            "redirect_history": [
+                {
+                    "status_code": redirect.status_code,
+                    "url": redirect.url,
+                    "location": redirect.headers.get("Location")
+                }
+                for redirect in response.history
+            ]
         }
-
     except requests.RequestException as error:
         return {
             "url": url,
