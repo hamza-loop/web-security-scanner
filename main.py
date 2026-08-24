@@ -1,4 +1,5 @@
 import argparse
+import json
 from urllib.parse import urlparse
 
 from scanner import scan_url
@@ -7,6 +8,9 @@ from cookies import check_cookie_security
 from tls import analyze_tls
 from redirects import analyze_redirects
 from methods import analyze_methods
+from technology import analyze_technology
+from disclosure import analyze_information_disclosure
+from scoring import calculate_score
 
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
@@ -26,6 +30,11 @@ parser.add_argument(
     default=10,
     help="Request timeout in seconds"
 )
+parser.add_argument(
+    "--json",
+    action="store_true",
+    help="Output scan results in JSON format"
+)
 
 args = parser.parse_args()
 
@@ -42,12 +51,78 @@ else:
     cookies = check_cookie_security(result["headers"])
     redirect_results = analyze_redirects(result)
     method_results = analyze_methods(result["url"], args.timeout)
+    technology_results = analyze_technology(result["headers"])
+    disclosure_results = analyze_information_disclosure(result["headers"])
 
     parsed_url = urlparse(result["url"])
     tls_analysis = None
 
     if parsed_url.scheme == "https":
         tls_analysis = analyze_tls(parsed_url.hostname)
+
+    scoring_input = {
+        "headers": {
+            "HSTS": security_headers.get("HSTS", {}).get("status") == "Present",
+            "CSP": security_headers.get("CSP", {}).get("status") == "Present",
+            "X-Content-Type-Options": (
+                security_headers.get("X-Content-Type-Options", {}).get("status")
+                == "Present"
+            ),
+        "X-Frame-Options": (
+            security_headers.get("X-Frame-Options", {}).get("status")
+            == "Present"
+        )
+    },
+    "tls": {
+        "is_https": parsed_url.scheme == "https",
+        "valid_certificate": (
+            tls_analysis.get("certificate_valid", False)
+            if tls_analysis
+            else False
+        ),
+        "valid_hostname": (
+            tls_analysis.get("hostname_valid", False)
+            if tls_analysis
+            else False
+        )
+    },
+    "methods": {
+        "allowed_methods": (
+            method_results.get("allowed_methods", [])
+            if method_results.get("status") == "success"
+            else []
+        )
+    },
+    "cookies": cookies,
+    "redirects": redirect_results,
+    "information_disclosure": disclosure_results
+}
+
+    score_results = calculate_score(scoring_input)
+
+    final_results = {
+        "target_info": {
+            "url": result["url"],
+            "method": result["method"],
+            "status_code": result["status_code"],
+            "server": result["server"],
+            "content_type": result["content_type"],
+            "redirects": result["redirects"],
+            "response_size": result["response_size"]
+        },
+        "security_headers": security_headers,
+        "cookies": cookies,
+        "tls_analysis": tls_analysis,
+        "redirect_analysis": redirect_results,
+        "method_analysis": method_results,
+        "technology_analysis": technology_results,
+        "information_disclosure": disclosure_results,
+        "security_score": score_results
+    }
+
+    if args.json:
+        print(json.dumps(final_results, indent=4))
+        exit()
 
     print("\n[+] Scan Result")
 
@@ -58,6 +133,26 @@ else:
     print("    - Content Type:", result["content_type"])
     print("    - Redirects:", result["redirects"])
     print("    - Response Size:", result["response_size"])
+
+    print("\n========================================")
+    print(
+        f"[★] SECURITY RATING: "
+        f"{score_results['score']}/100 "
+        f"({score_results['risk_level']})"
+    )
+    print("========================================")
+
+    if score_results.get("positive_findings"):
+        print("[+] Positive Security Findings:")
+        for finding in score_results["positive_findings"]:
+            print(f"    [✓] {finding}")
+
+    if score_results.get("findings"):
+        print("\n[!] Security Issues:")
+        for finding in score_results["findings"]:
+            print(f"    [-] {finding}")
+
+    print("========================================")
 
     print("\n[+] Redirect Security")
     print(f"    - Redirect Count: {redirect_results.get('redirect_count')}")
@@ -110,3 +205,24 @@ else:
             print(f"    - Status: {tls_analysis['status']}")
             print(f"    - Error Type: {tls_analysis['error_type']}")
             print(f"    - Error: {tls_analysis['error']}")
+
+    print("\n[+] Technology Detection")
+    print(f"    - Status: {technology_results['status']}")
+    print(f"    - Technologies Found: {technology_results['technology_count']}")
+    
+    if technology_results["technologies"]:
+        for technology in technology_results["technologies"]:
+            print(f"        - {technology['source']}: {technology['value']}")
+    else:
+        print("        No technology information identified")
+
+    print("\n[+] Information Disclosure")
+
+    print(f"    - Status: {disclosure_results['status']}")
+
+    if disclosure_results["findings"]:
+        print("    - Findings:")
+        for finding in disclosure_results["findings"]:
+            print(f"        [!] {finding}")
+    else:
+        print("    - No unnecessary technology information disclosed")
