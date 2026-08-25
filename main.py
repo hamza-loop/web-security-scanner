@@ -11,6 +11,7 @@ from methods import analyze_methods
 from technology import analyze_technology
 from disclosure import analyze_information_disclosure
 from scoring import calculate_score
+from reporter import generate_html_report
 
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
@@ -33,7 +34,17 @@ parser.add_argument(
 parser.add_argument(
     "--json",
     action="store_true",
-    help="Output scan results in JSON format"
+    help="Display results in JSON format"
+)
+
+parser.add_argument(
+    "--output",
+    help="Save scan results to a JSON file"
+)
+
+parser.add_argument(
+    "--html",
+    help="Save the scan report as an HTML file"
 )
 
 args = parser.parse_args()
@@ -122,7 +133,6 @@ else:
 
     if args.json:
         print(json.dumps(final_results, indent=4))
-        exit()
 
     print("\n[+] Scan Result")
 
@@ -226,3 +236,20 @@ else:
             print(f"        [!] {finding}")
     else:
         print("    - No unnecessary technology information disclosed")
+    
+    if args.output:
+        try:
+            with open(args.output, "w") as file:
+                json.dump(final_results, file, indent=4)
+
+            print(f"\n[+] Report saved to: {args.output}")
+
+        except OSError as error:
+            print(f"\n[-] Failed to save report: {error}")
+    
+    if args.html:
+        try:
+            generate_html_report(final_results, args.html)
+            print(f"\n[+] HTML report saved to: {args.html}")
+        except OSError as error:
+            print(f"\n[-] Failed to save HTML report: {error}")
