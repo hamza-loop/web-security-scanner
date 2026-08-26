@@ -12,6 +12,8 @@ from technology import analyze_technology
 from disclosure import analyze_information_disclosure
 from scoring import calculate_score
 from reporter import generate_html_report
+from cors import analyze_cors
+from robots import analyze_robots
 
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
@@ -64,6 +66,14 @@ else:
     method_results = analyze_methods(result["url"], args.timeout)
     technology_results = analyze_technology(result["headers"])
     disclosure_results = analyze_information_disclosure(result["headers"])
+    cors_results = analyze_cors(result["headers"])
+    cors_results = analyze_cors(result["headers"])
+
+    robots_results = analyze_robots(
+        result["url"],
+        args.timeout
+    )
+
 
     parsed_url = urlparse(result["url"])
     tls_analysis = None
@@ -128,11 +138,14 @@ else:
         "method_analysis": method_results,
         "technology_analysis": technology_results,
         "information_disclosure": disclosure_results,
+        "cors_analysis": cors_results,
+        "robots_analysis": robots_results,
         "security_score": score_results
     }
 
     if args.json:
         print(json.dumps(final_results, indent=4))
+        exit()
 
     print("\n[+] Scan Result")
 
@@ -253,3 +266,36 @@ else:
             print(f"\n[+] HTML report saved to: {args.html}")
         except OSError as error:
             print(f"\n[-] Failed to save HTML report: {error}")
+    
+    print("\n[+] CORS Security")
+
+    print(f"    - Status: {cors_results['status']}")
+    print(f"    - Allowed Origin: {cors_results['allow_origin'] or 'Not disclosed'}")
+    print(f"    - Credentials: {cors_results['allow_credentials'] or 'Not disclosed'}")
+    print(f"    - Allowed Methods: {cors_results['allow_methods'] or 'Not disclosed'}")
+
+    if cors_results["findings"]:
+        print("    - Findings:")
+        for finding in cors_results["findings"]:
+            print(f"        [!] {finding}")
+    else:
+        print("    - No CORS security issues detected")
+
+    print("\n[+] robots.txt Analysis")
+
+    print(f"    - Status: {robots_results['status']}")
+    print(f"    - URL: {robots_results['robots_url']}")
+
+    if robots_results["status"] == "found":
+        print(
+            f"    - Disallowed Paths: "
+            f"{robots_results['disallowed_count']}"
+        )
+
+        if robots_results["disallowed_paths"]:
+            print("    - Paths:")
+            for path in robots_results["disallowed_paths"]:
+                print(f"        [i] {path}")
+
+    elif robots_results["status"] == "error":
+        print(f"    - Error: {robots_results.get('error')}")
