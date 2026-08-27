@@ -3,4 +3,7 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+
+# Generated scan reports
 reports/
+test_report.html

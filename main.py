@@ -14,6 +14,7 @@ from scoring import calculate_score
 from reporter import generate_html_report
 from cors import analyze_cors
 from robots import analyze_robots
+from endpoints import check_common_endpoints
 
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
@@ -67,13 +68,15 @@ else:
     technology_results = analyze_technology(result["headers"])
     disclosure_results = analyze_information_disclosure(result["headers"])
     cors_results = analyze_cors(result["headers"])
-    cors_results = analyze_cors(result["headers"])
+
 
     robots_results = analyze_robots(
         result["url"],
         args.timeout
     )
-
+    endpoint_results = check_common_endpoints(
+        result["url"]
+    )
 
     parsed_url = urlparse(result["url"])
     tls_analysis = None
@@ -140,7 +143,8 @@ else:
         "information_disclosure": disclosure_results,
         "cors_analysis": cors_results,
         "robots_analysis": robots_results,
-        "security_score": score_results
+        "security_score": score_results,
+        "endpoint_analysis": endpoint_results
     }
 
     if args.json:
@@ -299,3 +303,22 @@ else:
 
     elif robots_results["status"] == "error":
         print(f"    - Error: {robots_results.get('error')}")
+
+        
+    print("\n[+] Common Endpoint Discovery")
+
+    reachable_endpoints = [
+        endpoint for endpoint in endpoint_results
+        if endpoint["reachable"]
+    ]
+
+    print(f"    - Reachable Endpoints: {len(reachable_endpoints)}")
+
+    if reachable_endpoints:
+        for endpoint in reachable_endpoints:
+            print(
+                f"        [i] {endpoint['endpoint']} "
+                f"({endpoint['status_code']})"
+            )
+    else:
+        print("    - No common endpoints found")
