@@ -1,5 +1,4 @@
 from unittest.mock import patch, Mock
-
 from scan_engine import run_security_scan
 
 
@@ -13,6 +12,7 @@ def test_scan_engine_returns_error_when_scan_fails():
 
     assert result == fake_result
 
+
 def test_scan_engine_returns_complete_results():
     fake_scan_result = {
         "url": "https://example.com/",
@@ -24,6 +24,7 @@ def test_scan_engine_returns_complete_results():
         "redirects": 0,
         "response_size": 100,
     }
+
     mock_methods = Mock(
         return_value={
             "status": "success",
@@ -43,12 +44,6 @@ def test_scan_engine_returns_complete_results():
     ), patch(
         "scan_engine.analyze_redirects",
         return_value={}
-    ), patch(
-        "scan_engine.calculate_score",
-        return_value={
-            "score": 100,
-            "risk_level": "Low Risk"
-        }
     ), patch(
         "scan_engine.analyze_methods",
         mock_methods
@@ -73,15 +68,12 @@ def test_scan_engine_returns_complete_results():
             "certificate_valid": True,
             "hostname_valid": True
         }
-    ),  patch(
-            "scan_engine.calculate_score",
-            return_value={
-                "score": 100,
-                "risk_level": "Low Risk"
-            }
-    ),  patch(
-            "scan_engine.analyze_methods",
-            mock_methods
+    ), patch(
+        "scan_engine.calculate_score",
+        return_value={
+            "score": 100,
+            "risk_level": "Low Risk"
+        }
     ):
         result = run_security_scan("https://example.com")
 
