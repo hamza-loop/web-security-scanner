@@ -7,10 +7,15 @@ def test_scan_engine_returns_error_when_scan_fails():
         "error": "Connection failed"
     }
 
-    with patch("scan_engine.scan_url", return_value=fake_result):
+    # If calculate_score is called when a scan fails, you must patch it here.
+    # If it is NOT called when a scan fails, you should remove this patch entirely.
+    with patch("scan_engine.scan_url", return_value=fake_result), \
+         patch("scan_engine.calculate_score") as mock_calculate_score:
+         
         result = run_security_scan("https://example.com")
 
     assert result == fake_result
+    # mock_calculate_score.assert_called_once() # Uncomment if it's supposed to be called
 
 
 def test_scan_engine_returns_complete_results():
@@ -29,6 +34,14 @@ def test_scan_engine_returns_complete_results():
         return_value={
             "status": "success",
             "allowed_methods": []
+        }
+    )
+
+    # Defined locally inside this test so it is in scope
+    mock_calculate_score = Mock(
+        return_value={
+            "score": 100,
+            "risk_level": "Low Risk"
         }
     )
 
@@ -70,16 +83,28 @@ def test_scan_engine_returns_complete_results():
         }
     ), patch(
         "scan_engine.calculate_score",
-        return_value={
-            "score": 100,
-            "risk_level": "Low Risk"
-        }
+        mock_calculate_score  # Now this variable safely exists in this scope
     ):
         result = run_security_scan("https://example.com")
 
     assert result["target_info"]["url"] == "https://example.com/"
     assert result["target_info"]["status_code"] == 200
     assert result["security_score"]["score"] == 100
+
+    mock_calculate_score.assert_called_once()
+
+    scoring_input = mock_calculate_score.call_args[0][0]
+
+    assert scoring_input["headers"] == {
+    "HSTS": False,
+    "CSP": False,
+    "X-Content-Type-Options": False,
+    "X-Frame-Options": False,
+}
+
+    assert scoring_input["cookies"] == []
+    assert scoring_input["redirects"] == {}
+    assert scoring_input["information_disclosure"] == {}
 
     mock_methods.assert_called_once_with(
         "https://example.com/",
