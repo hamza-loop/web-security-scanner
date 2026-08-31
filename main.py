@@ -3,6 +3,7 @@ import json
 
 from scan_engine import run_security_scan
 from reporter import generate_html_report
+from url_utils import normalize_url
 
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
@@ -42,10 +43,16 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+try:
+    target_url = normalize_url(args.url)
+except ValueError as error:
+    print(f"[-] Invalid URL: {error}")
+    exit(1)
+
 
 # Run the complete security scan
 final_results = run_security_scan(
-    args.url,
+    target_url,
     args.method,
     args.timeout
 )
