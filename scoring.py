@@ -1,3 +1,11 @@
+from finding import SecurityFinding
+
+def serialize_finding(finding):
+    if isinstance(finding, SecurityFinding):
+        return finding.to_dict()
+
+    return finding
+
 def calculate_score(scan_results):
     score = 100
     findings = []
@@ -7,37 +15,95 @@ def calculate_score(scan_results):
     headers = scan_results.get("headers", {})
 
     header_checks = [
-        ("HSTS", "Missing HSTS header", 15),
-        ("CSP", "Missing Content Security Policy", 15),
-        ("X-Content-Type-Options", "Missing X-Content-Type-Options", 10),
-        ("X-Frame-Options", "Missing X-Frame-Options", 10)
-    ]
+    (
+        "HSTS",
+        "Missing HSTS header",
+        "High",
+        "The target does not enforce HTTP Strict Transport Security.",
+        15,
+    ),
+    (
+        "CSP",
+        "Missing Content Security Policy",
+        "High",
+        "The target does not define a Content Security Policy.",
+        15,
+    ),
+    (
+        "X-Content-Type-Options",
+        "Missing X-Content-Type-Options",
+        "Medium",
+        "The target may allow MIME type sniffing.",
+        10,
+    ),
+    (
+        "X-Frame-Options",
+        "Missing X-Frame-Options",
+        "Medium",
+        "The target may be vulnerable to clickjacking.",
+        10,
+    ),
+]
 
-    for header, message, deduction in header_checks:
+    for header, name, severity, description, deduction in header_checks:
         if not headers.get(header, False):
             score -= deduction
-            findings.append(f"{message} (-{deduction})")
+
+            finding = SecurityFinding(
+                name,
+                severity,
+                description,
+                -deduction,
+            )
+
+            findings.append(finding)
         else:
             positive_findings.append(f"{header} header is present")
-
     # TLS / HTTPS Security
     tls = scan_results.get("tls", {})
 
     if not tls.get("is_https", False):
         score -= 20
-        findings.append("Insecure HTTP connection (-20)")
+
+        finding = SecurityFinding(
+            "Insecure HTTP Connection",
+            "High",
+            "The target is using an insecure HTTP connection.",
+            -20,
+        )
+
+        findings.append(finding)
+
     else:
         positive_findings.append("HTTPS connection is in use")
 
         if not tls.get("valid_certificate", False):
             score -= 25
-            findings.append("Invalid TLS certificate (-25)")
+
+            finding = SecurityFinding(
+                "Invalid TLS Certificate",
+                "High",
+                "The target's TLS certificate is invalid.",
+                -25,
+            )
+
+            findings.append(finding)
+
         else:
             positive_findings.append("TLS certificate is valid")
 
         if not tls.get("valid_hostname", False):
             score -= 25
-            findings.append("TLS hostname validation failed (-25)")
+
+            finding = SecurityFinding(
+                "TLS Hostname Validation Failed",
+                "High",
+                "The TLS certificate hostname does not match the target.",
+                -25,
+            )
+
+            findings.append(finding)
+
         else:
             positive_findings.append("TLS hostname validation passed")
 
@@ -47,7 +113,16 @@ def calculate_score(scan_results):
 
     if "TRACE" in allowed_methods:
         score -= 15
-        findings.append("TRACE method is allowed (-15)")
+
+        finding = SecurityFinding(
+            "TRACE Method Enabled",
+            "High",
+            "The TRACE HTTP method is enabled and may expose sensitive request information.",
+            -15,
+        )
+
+        findings.append(finding)
+
     else:
         positive_findings.append("TRACE method is not exposed")
 
@@ -101,14 +176,25 @@ def calculate_score(scan_results):
             "No unnecessary technology information was disclosed"
         )
     else:
-        for finding in disclosure_findings:
-            if "version information" in finding:
-                score -= 5
-                findings.append(f"{finding} (-5)")
-            else:
-                score -= 2
-                findings.append(f"{finding} (-2)")
+        for disclosure_finding in disclosure_findings:
 
+            if "version information" in disclosure_finding:
+                deduction = 5
+                severity = "Medium"
+            else:
+                deduction = 2
+                severity = "Low"
+
+            score -= deduction
+
+            finding = SecurityFinding(
+                "Information Disclosure",
+                severity,
+                disclosure_finding,
+                -deduction,
+            )
+
+            findings.append(finding)
     # Keep score between 0 and 100
     score = max(0, min(score, 100))
 
@@ -123,6 +209,9 @@ def calculate_score(scan_results):
     return {
         "score": score,
         "risk_level": risk,
-        "findings": findings,
+        "findings": [
+            serialize_finding(finding)
+            for finding in findings
+        ],
         "positive_findings": positive_findings
     }

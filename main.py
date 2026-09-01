@@ -112,9 +112,17 @@ if score_results.get("positive_findings"):
 
 if score_results.get("findings"):
     print("\n[!] Security Issues:")
-    for finding in score_results["findings"]:
-        print(f"    [-] {finding}")
 
+    for finding in score_results["findings"]:
+
+        if isinstance(finding, dict):
+            print(f"    [-] {finding['name']}")
+            print(f"        Severity: {finding['severity']}")
+            print(f"        Description: {finding['description']}")
+            print(f"        Score Impact: {finding['score_impact']}")
+
+        else:
+            print(f"    [-] {finding}")
 print("========================================")
 
 
