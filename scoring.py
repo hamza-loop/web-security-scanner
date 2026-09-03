@@ -12,7 +12,7 @@ def calculate_score(scan_results):
     positive_findings = []
 
     # Security Headers
-    headers = scan_results.get("headers", {})
+    headers = scan_results.get("security_headers", {})
 
     header_checks = [
     (
@@ -46,7 +46,9 @@ def calculate_score(scan_results):
 ]
 
     for header, name, severity, description, deduction in header_checks:
-        if not headers.get(header, False):
+        header_result = headers.get(header, {})
+
+        if header_result.get("status") != "Present":
             score -= deduction
 
             finding = SecurityFinding(
@@ -77,7 +79,7 @@ def calculate_score(scan_results):
     else:
         positive_findings.append("HTTPS connection is in use")
 
-        if not tls.get("valid_certificate", False):
+        if not tls.get("certificate_valid", False):
             score -= 25
 
             finding = SecurityFinding(
@@ -92,7 +94,7 @@ def calculate_score(scan_results):
         else:
             positive_findings.append("TLS certificate is valid")
 
-        if not tls.get("valid_hostname", False):
+        if not tls.get("hostname_valid", False):
             score -= 25
 
             finding = SecurityFinding(
@@ -127,8 +129,8 @@ def calculate_score(scan_results):
         positive_findings.append("TRACE method is not exposed")
 
     # Cookie Security
-    cookies = scan_results.get("cookies", [])
-
+    cookie_results = scan_results.get("cookies", {})
+    cookies = cookie_results.get("cookies", [])
     if not cookies:
         positive_findings.append("No cookies were detected")
     else:
