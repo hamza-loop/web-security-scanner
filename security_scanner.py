@@ -7,6 +7,7 @@ from robots import analyze_robots
 from endpoints import check_common_endpoints
 from technology import analyze_technology
 from disclosure import analyze_information_disclosure
+from scoring import calculate_score
 
 
 class SecurityScanner:
@@ -51,7 +52,10 @@ class SecurityScanner:
             "information_disclosure": self.get_information_disclosure()
         }
 
-        # Step 4: Store the complete results
+        # Step 4: Calculate the security score
+        complete_results["security_score"] = calculate_score(complete_results)
+
+        # Step 5: Store the complete results
         self.results = complete_results
 
         return self.results
@@ -289,3 +293,6 @@ print(scanner.results.get("technology"))
 
 print("\nInformation Disclosure:")
 print(scanner.results.get("information_disclosure"))
+
+print("\nSecurity Score:")
+print(scanner.results.get("security_score"))

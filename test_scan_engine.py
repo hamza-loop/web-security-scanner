@@ -95,14 +95,22 @@ def test_scan_engine_returns_complete_results():
 
     scoring_input = mock_calculate_score.call_args[0][0]
 
-    assert scoring_input["headers"] == {
-    "HSTS": False,
-    "CSP": False,
-    "X-Content-Type-Options": False,
-    "X-Frame-Options": False,
-}
+    assert scoring_input["basic"] == {
+        "url": "https://example.com/"
+    }
 
-    assert scoring_input["cookies"] == []
+    assert scoring_input["security_headers"] == {}
+
+    assert scoring_input["tls"] == {
+        "certificate_valid": True,
+        "hostname_valid": True
+    }
+
+    assert scoring_input["cookies"] == {
+        "status": "No cookies found",
+        "cookies": []
+    }
+
     assert scoring_input["redirects"] == {}
     assert scoring_input["information_disclosure"] == {}
 

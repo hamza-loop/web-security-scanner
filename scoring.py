@@ -64,7 +64,12 @@ def calculate_score(scan_results):
     # TLS / HTTPS Security
     tls = scan_results.get("tls", {})
 
-    if not tls.get("is_https", False):
+    url = (
+        scan_results.get("basic", {}).get("url")
+        or scan_results.get("basic_info", {}).get("url", "")
+    )
+
+    if not url.startswith("https://"):
         score -= 20
 
         finding = SecurityFinding(

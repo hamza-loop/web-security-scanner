@@ -76,6 +76,10 @@ def test_calculate_score_returns_expected_score():
 
 def test_score_deductions_for_missing_headers():
     scan_data = {
+        "basic": {
+            "url": "https://example.com/"
+        },
+
         "security_headers": {
         "HSTS": {
             "status": "Missing",
