@@ -95,6 +95,10 @@ def test_scan_engine_returns_complete_results():
 
     scoring_input = mock_calculate_score.call_args[0][0]
 
+    assert scoring_input["target_info"]["url"] == (
+        "https://example.com/"
+    )
+
     assert scoring_input["basic"] == {
         "url": "https://example.com/"
     }
@@ -112,8 +116,12 @@ def test_scan_engine_returns_complete_results():
     }
 
     assert scoring_input["redirects"] == {}
-    assert scoring_input["information_disclosure"] == {}
+    assert scoring_input["methods"] == {
+        "status": "success",
+        "allowed_methods": []
+    }
 
+    assert scoring_input["information_disclosure"] == {}
     mock_methods.assert_called_once_with(
         "https://example.com/",
         10
