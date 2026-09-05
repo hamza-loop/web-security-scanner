@@ -173,7 +173,7 @@ def calculate_score(scan_results):
             "No HTTPS to HTTP redirect downgrade detected"
         )
 
-    # Information Disclosure
+        # Information Disclosure
     disclosure = scan_results.get("information_disclosure", {})
 
     disclosure_findings = disclosure.get("findings", [])
@@ -182,23 +182,37 @@ def calculate_score(scan_results):
         positive_findings.append(
             "No unnecessary technology information was disclosed"
         )
+
     else:
         for disclosure_finding in disclosure_findings:
 
-            if "version information" in disclosure_finding:
+            severity = disclosure_finding.get(
+                "severity",
+                "Low"
+            )
+
+            description = disclosure_finding.get(
+                "description",
+                "Technology information was disclosed"
+            )
+
+            name = disclosure_finding.get(
+                "name",
+                "Information Disclosure"
+            )
+
+            if severity == "Medium":
                 deduction = 5
-                severity = "Medium"
             else:
                 deduction = 2
-                severity = "Low"
 
             score -= deduction
 
             finding = SecurityFinding(
-                "Information Disclosure",
-                severity,
-                disclosure_finding,
-                -deduction,
+                name=name,
+                severity=severity,
+                description=description,
+                score_impact=-deduction,
             )
 
             findings.append(finding)

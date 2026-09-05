@@ -1,5 +1,7 @@
 import re
 
+from finding import SecurityFinding
+
 
 def analyze_information_disclosure(headers):
     findings = []
@@ -9,7 +11,7 @@ def analyze_information_disclosure(headers):
         "Server",
         "X-Powered-By",
         "X-AspNet-Version",
-        "X-AspNetMvc-Version"
+        "X-AspNetMvc-Version",
     ]
 
     for header in sensitive_headers:
@@ -21,13 +23,24 @@ def analyze_information_disclosure(headers):
         exposed_headers[header] = value
 
         if re.search(r"\d", value):
-            findings.append(
-                f"{header} exposes version information: {value}"
+            finding = SecurityFinding(
+                name="Version Information Disclosure",
+                severity="Medium",
+                description=(
+                    f"{header} exposes version information: {value}"
+                ),
             )
+
         else:
-            findings.append(
-                f"{header} discloses technology information: {value}"
+            finding = SecurityFinding(
+                name="Technology Information Disclosure",
+                severity="Low",
+                description=(
+                    f"{header} discloses technology information: {value}"
+                ),
             )
+
+        findings.append(finding.to_dict())
 
     if findings:
         status = "warning"
@@ -37,5 +50,5 @@ def analyze_information_disclosure(headers):
     return {
         "status": status,
         "exposed_headers": exposed_headers,
-        "findings": findings
+        "findings": findings,
     }

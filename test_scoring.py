@@ -49,7 +49,14 @@ mock_scan = {
 
     "information_disclosure": {
         "findings": [
-            "Server exposes version information: Apache/2.4.57"
+            {
+                "name": "Technology Information Disclosure",
+                "severity": "Low",
+                "description": (
+                    "Server discloses technology information: nginx"
+                ),
+                "score_impact": 0,
+            }
         ]
     }
 }
