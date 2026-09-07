@@ -1,3 +1,4 @@
+import json
 from html import escape
 
 
@@ -142,5 +143,20 @@ def generate_html_report(results, output_file="report.html"):
 
     with open(output_file, "w", encoding="utf-8") as file:
         file.write(html)
+
+    return output_file
+
+def generate_json_report(results, output_file="report.json"):
+    """
+    Generate a JSON security scan report.
+    """
+
+    with open(output_file, "w", encoding="utf-8") as file:
+        json.dump(
+            results,
+            file,
+            indent=4,
+            default=str,
+        )
 
     return output_file

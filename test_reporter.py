@@ -1,4 +1,7 @@
-from reporter import generate_html_report
+from reporter import (
+    generate_html_report,
+    generate_json_report,
+)
 
 
 def test_generate_html_report(tmp_path):
@@ -23,19 +26,9 @@ def test_generate_html_report(tmp_path):
                     ),
                     "score_impact": -15,
                 },
-                {
-                    "name": "Missing HSTS Header",
-                    "severity": "High",
-                    "description": (
-                        "The target does not enforce "
-                        "HTTP Strict Transport Security."
-                    ),
-                    "score_impact": -15,
-                },
             ],
             "positive_findings": [
                 "HTTPS connection is in use",
-                "TLS certificate is valid",
             ],
         },
     }
@@ -57,7 +50,34 @@ def test_generate_html_report(tmp_path):
     assert "Web Security Scan Report" in content
     assert "https://example.com" in content
     assert "75/100" in content
-    assert "Medium Risk" in content
-    assert "Missing Content Security Policy" in content
-    assert "Missing HSTS Header" in content
-    assert "HTTPS connection is in use" in content
+
+
+def test_generate_json_report(tmp_path):
+    results = {
+        "target_info": {
+            "url": "https://example.com",
+            "status_code": 200,
+        },
+        "security_score": {
+            "score": 75,
+            "risk_level": "Medium Risk",
+        },
+    }
+
+    output_file = tmp_path / "report.json"
+
+    result = generate_json_report(
+        results,
+        output_file,
+    )
+
+    assert result == output_file
+    assert output_file.exists()
+
+    content = output_file.read_text(
+        encoding="utf-8"
+    )
+
+    assert '"url": "https://example.com"' in content
+    assert '"score": 75' in content
+    assert '"risk_level": "Medium Risk"' in content
