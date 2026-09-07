@@ -2,9 +2,11 @@ import argparse
 import json
 
 from scan_engine import run_security_scan
-from reporter import generate_html_report
+from reporter import (
+    generate_html_report,
+    generate_json_report,
+)
 from url_utils import normalize_url
-
 
 parser = argparse.ArgumentParser(description="Web Security Scanner")
 
@@ -68,16 +70,19 @@ if "error" in final_results:
 result = final_results["target_info"]
 security_headers = final_results["security_headers"]
 cookies = final_results["cookies"]
-tls_analysis = final_results["tls_analysis"]
-redirect_results = final_results["redirect_analysis"]
-method_results = final_results["method_analysis"]
-technology_results = final_results["technology_analysis"]
-disclosure_results = final_results["information_disclosure"]
-cors_results = final_results["cors_analysis"]
-robots_results = final_results["robots_analysis"]
-endpoint_results = final_results["endpoint_analysis"]
-score_results = final_results["security_score"]
 
+tls_analysis = final_results["tls"]
+redirect_results = final_results["redirects"]
+method_results = final_results["methods"]
+
+technology_results = final_results["technology"]
+disclosure_results = final_results["information_disclosure"]
+
+cors_results = final_results["cors"]
+robots_results = final_results["robots"]
+endpoint_results = final_results["endpoints"]
+
+score_results = final_results["security_score"]
 
 # JSON output
 if args.json:
@@ -164,20 +169,30 @@ else:
 
 
 # Cookie security
+# Cookie security
 print("\n[+] Cookie Security")
 
-if cookies:
-    for cookie in cookies:
+print(f"    - Status: {cookies['status']}")
+
+cookie_list = cookies.get("cookies", [])
+
+if cookie_list:
+    for cookie in cookie_list:
         print(f"    - {cookie['name']}:")
-        print(f"        Secure: {'Present' if cookie['secure'] else 'Missing'}")
+        print(
+            f"        Secure: "
+            f"{'Present' if cookie['secure'] else 'Missing'}"
+        )
         print(
             f"        HttpOnly: "
             f"{'Present' if cookie['httponly'] else 'Missing'}"
         )
-        print(f"        SameSite: {cookie['samesite'] or 'Missing'}")
+        print(
+            f"        SameSite: "
+            f"{cookie['samesite'] or 'Missing'}"
+        )
 else:
     print("    - No cookies found")
-
 
 # TLS security
 if tls_analysis:
@@ -295,13 +310,15 @@ else:
 # Save JSON report
 if args.output:
     try:
-        with open(args.output, "w") as file:
-            json.dump(final_results, file, indent=4)
+        generate_json_report(
+            final_results,
+            args.output,
+        )
 
-        print(f"\n[+] Report saved to: {args.output}")
+        print(f"\n[+] JSON report saved to: {args.output}")
 
     except OSError as error:
-        print(f"\n[-] Failed to save report: {error}")
+        print(f"\n[-] Failed to save JSON report: {error}")
 
 
 # Save HTML report
