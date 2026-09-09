@@ -1,3 +1,5 @@
+import logging
+
 from scanner import scan_url
 from headers import check_security_headers
 from cookies import check_cookie_security
@@ -10,15 +12,18 @@ from cors import analyze_cors
 from robots import analyze_robots
 from endpoints import check_common_endpoints
 from scoring import calculate_score
-
 from urllib.parse import urlparse
 
+
+logger = logging.getLogger(__name__)
 
 def run_security_scan(url, method="GET", timeout=10):
     """
     Run the complete web security scanning pipeline.
     """
 
+    logger.info("Starting complete security scan for %s", url)
+    
     # Step 1: Perform the main HTTP scan
     result = scan_url(url, method, timeout)
 

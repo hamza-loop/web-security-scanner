@@ -7,3 +7,7 @@ __pycache__/
 # Generated scan reports
 reports/
 test_report.html
+
+# Logs and practice files
+logs/
+practice/

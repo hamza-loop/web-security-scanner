@@ -8,6 +8,7 @@ from reporter import (
 )
 from scan_engine import run_security_scan
 from url_utils import normalize_url
+from logger_config import configure_logging
 
 
 parser = argparse.ArgumentParser(
@@ -57,6 +58,8 @@ parser.add_argument(
 
 
 args = parser.parse_args()
+
+configure_logging()
 
 
 # Normalize and validate the target URL
