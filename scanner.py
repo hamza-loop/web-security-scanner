@@ -19,6 +19,10 @@ def scan_url(url, method="GET", timeout=10):
             "redirects": len(response.history),
             "response_size": len(response.content),
             "headers": dict(response.headers),
+            "set_cookies": response.raw.headers.getlist("Set-Cookie")
+            if hasattr(getattr(response, "raw", None), "headers")
+            and hasattr(response.raw.headers, "getlist")
+            else [],
             "redirect_history": [
                 {
                     "status_code": redirect.status_code,

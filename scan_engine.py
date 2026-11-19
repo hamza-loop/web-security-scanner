@@ -13,6 +13,7 @@ from robots import analyze_robots
 from endpoints import check_common_endpoints
 from scoring import calculate_score
 from urllib.parse import urlparse
+from requests.structures import CaseInsensitiveDict
 
 
 logger = logging.getLogger(__name__)
@@ -31,9 +32,16 @@ def run_security_scan(url, method="GET", timeout=10):
     if "error" in result:
         return result
 
-    # Step 2: Run all security analysis modules
-    security_headers = check_security_headers(result["headers"])
-    cookies = check_cookie_security(result["headers"])
+        # Step 2: Run all security analysis modules
+    # Header names are case-insensitive (many servers send them lowercase)
+    headers = CaseInsensitiveDict(result["headers"])
+
+    security_headers = check_security_headers(headers)
+
+    cookies = check_cookie_security(
+        {"Set-Cookie": result.get("set_cookies") or headers.get("Set-Cookie")}
+    )
+
     redirect_results = analyze_redirects(result)
 
     method_results = analyze_methods(
@@ -41,11 +49,11 @@ def run_security_scan(url, method="GET", timeout=10):
         timeout
     )
 
-    technology_results = analyze_technology(result["headers"])
-    disclosure_results = analyze_information_disclosure(
-        result["headers"]
-    )
-    cors_results = analyze_cors(result["headers"])
+    technology_results = analyze_technology(headers)
+
+    disclosure_results = analyze_information_disclosure(headers)
+
+    cors_results = analyze_cors(headers)
 
     robots_results = analyze_robots(
         result["url"],
@@ -55,7 +63,6 @@ def run_security_scan(url, method="GET", timeout=10):
     endpoint_results = check_common_endpoints(
         result["url"]
     )
-
     # Step 3: Analyze TLS when HTTPS is being used
     parsed_url = urlparse(result["url"])
     tls_results = {}
