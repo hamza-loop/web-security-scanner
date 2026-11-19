@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Security Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #eef1f4;
+  --card: #ffffff;
+  --ink: #17212b;
+  --muted: #5b6b7b;
+  --line: #d5dce3;
+  --focus: #0e6b63;
+  --high: #b3261e;   --high-bg: #fbe9e7;
+  --med: #8f5400;    --med-bg: #fff1d6;
+  --low: #1f5fa8;    --low-bg: #e4eefa;
+  --pass: #1e6b3c;   --pass-bg: #e3f3e8;
+  --sans: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0f161d; --card: #172029; --ink: #e8edf2; --muted: #93a3b3;
+    --line: #28343f; --focus: #4fc3b6;
+    --high: #ff8a80; --high-bg: #3a1f1d;
+    --med: #f5b84f;  --med-bg: #3a2c12;
+    --low: #7fb4f0;  --low-bg: #16293d;
+    --pass: #6fd49a; --pass-bg: #14301f;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 16px/1.5 var(--sans);
+}
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+header.top { padding: 18px 0; border-bottom: 1px solid var(--line); font-weight: 600; }
+
+.intro { padding: 44px 0 28px; }
+h1 { font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.02em; max-width: 18ch; }
+.lede { margin: 0 0 24px; color: var(--muted); max-width: 56ch; }
+
+form.scan { display: flex; gap: 10px; flex-wrap: wrap; max-width: 720px; }
+form.scan input {
+  flex: 1 1 320px; min-width: 0; padding: 14px 16px; font: 500 16px var(--mono);
+  color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 8px;
+}
+form.scan input::placeholder { color: var(--muted); font-weight: 400; }
+button.primary {
+  padding: 14px 24px; font: 600 16px var(--sans); color: var(--paper); background: var(--ink);
+  border: 0; border-radius: 8px; cursor: pointer;
+}
+button.primary:disabled { opacity: .55; cursor: progress; }
+.notice { margin: 12px 0 0; font-size: 14px; color: var(--muted); }
+
+#status { margin: 28px 0 0; }
+.loading { display: flex; align-items: center; gap: 14px; color: var(--muted); }
+.bar { flex: 0 0 120px; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar::after { content: ""; display: block; width: 40%; height: 100%; background: var(--focus); animation: slide 1.2s ease-in-out infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+.error { padding: 14px 16px; background: var(--high-bg); color: var(--high); border-radius: 8px; border-left: 4px solid var(--high); max-width: 720px; }
+.error strong { display: block; }
+
+#results { padding: 8px 0 64px; }
+.layout { display: grid; gap: 28px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 900px) { .layout { grid-template-columns: 330px 1fr; } .summary { position: sticky; top: 20px; } }
+
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px; }
+.summary .gauge { display: block; margin: 0 auto 8px; width: 190px; height: 190px; }
+.gauge .track { stroke: var(--line); }
+.gauge .num { font: 700 46px var(--sans); fill: var(--ink); }
+.gauge .of { font: 500 13px var(--sans); fill: var(--muted); }
+.risk { text-align: center; font-weight: 600; margin: 0 0 4px; }
+.bands { text-align: center; font-size: 13px; color: var(--muted); margin: 0 0 18px; }
+dl.facts { margin: 0; border-top: 1px solid var(--line); }
+dl.facts div { display: flex; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; font-family: var(--mono); font-size: 13px; text-align: right; overflow-wrap: anywhere; }
+.actions { margin-top: 16px; }
+button.ghost { width: 100%; padding: 10px; font: 600 14px var(--sans); color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 8px; cursor: pointer; }
+
+h2 { font-size: 20px; margin: 0 0 14px; letter-spacing: -0.01em; }
+section.block { margin-bottom: 32px; }
+.finding { background: var(--card); border: 1px solid var(--line); border-left-width: 5px; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+.finding.high { border-left-color: var(--high); } .finding.medium { border-left-color: var(--med); } .finding.low { border-left-color: var(--low); }
+.finding .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.finding .name { font-weight: 600; }
+.finding .desc { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+.impact { font: 500 13px var(--mono); color: var(--muted); }
+.pill { display: inline-block; padding: 1px 9px; border-radius: 99px; font-size: 13px; font-weight: 600; margin-right: 8px; }
+.pill.high { background: var(--high-bg); color: var(--high); }
+.pill.medium { background: var(--med-bg); color: var(--med); }
+.pill.low { background: var(--low-bg); color: var(--low); }
+.pill.pass { background: var(--pass-bg); color: var(--pass); }
+.empty { padding: 16px; background: var(--pass-bg); color: var(--pass); border-radius: 8px; font-weight: 500; }
+ul.passed { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+ul.passed li { display: flex; gap: 10px; padding: 9px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; font-size: 15px; }
+ul.passed li::before { content: "\2713"; color: var(--pass); font-weight: 700; }
+
+details { background: var(--card); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; }
+summary { cursor: pointer; padding: 13px 16px; font-weight: 600; list-style-position: inside; }
+details > div { padding: 0 16px 16px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; }
+td.mono, .mono { font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
+.muted { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { .bar::after { animation: none; width: 100%; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">Web Security Scanner</div></header>
+
+<main class="wrap">
+  <div class="intro">
+    <h1>Check a website's security setup</h1>
+    <p class="lede">Paste a web address. You'll get a score out of 100, the problems found, and what already passes.</p>
+    <form class="scan" id="scan-form">
+      <input id="url" name="url" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+             placeholder="example.com or https://example.com" aria-label="Website address" required>
+      <button class="primary" id="go" type="submit">Scan website</button>
+    </form>
+    <p class="notice">Only scan sites you own or have permission to test.</p>
+    <div id="status" role="status" aria-live="polite"></div>
+  </div>
+  <div id="results"></div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var form = document.getElementById("scan-form");
+  var input = document.getElementById("url");
+  var button = document.getElementById("go");
+  var statusBox = document.getElementById("status");
+  var resultsBox = document.getElementById("results");
+  var lastReport = null;
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  function fmt(value) {
+    if (value === null || value === undefined || value === "") return "\u2014";
+    if (value === true) return "Yes";
+    if (value === false) return "No";
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  }
+
+  function table(headers, rows) {
+    var t = el("table");
+    var head = el("tr");
+    headers.forEach(function (h) { head.appendChild(el("th", null, h)); });
+    t.appendChild(el("thead")).appendChild(head);
+    var body = el("tbody");
+    rows.forEach(function (row) {
+      var tr = el("tr");
+      row.forEach(function (cell) {
+        var td = el("td");
+        if (cell instanceof Node) td.appendChild(cell);
+        else { td.textContent = fmt(cell); td.className = "mono"; }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    t.appendChild(body);
+    return t;
+  }
+
+  function pill(text, kind) { return el("span", "pill " + kind, text); }
+
+  function pairs(obj, keys) {
+    return table(["Check", "Result"], keys.map(function (k) { return [k[1], obj[k[0]]]; }));
+  }
+
+  function detail(title, content) {
+    var d = el("details");
+    d.appendChild(el("summary", null, title));
+    var body = el("div");
+    if (typeof content === "string") body.appendChild(el("p", "muted", content));
+    else body.appendChild(content);
+    d.appendChild(body);
+    return d;
+  }
+
+  /* ---------- score ring: ticks mark where the risk bands change (50 and 85) ---------- */
+  function gauge(score, riskKind) {
+    var NS = "http://www.w3.org/2000/svg";
+    var C = 2 * Math.PI * 70;
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 190 190");
+    svg.setAttribute("class", "gauge");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Security score " + score + " out of 100");
+
+    function make(name, attrs) {
+      var n = document.createElementNS(NS, name);
+      Object.keys(attrs).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+      svg.appendChild(n);
+      return n;
+    }
+
+    make("circle", { cx: 95, cy: 95, r: 70, fill: "none", "stroke-width": 12, "class": "track" });
+    var arc = make("circle", {
+      cx: 95, cy: 95, r: 70, fill: "none", "stroke-width": 12, "stroke-linecap": "round",
+      transform: "rotate(-90 95 95)", "stroke-dasharray": "0 " + C,
+      style: "stroke: var(--" + riskKind + ")"
+    });
+    [50, 85].forEach(function (t) {
+      var a = (t / 100) * 2 * Math.PI - Math.PI / 2;
+      make("line", {
+        x1: 95 + Math.cos(a) * 80, y1: 95 + Math.sin(a) * 80,
+        x2: 95 + Math.cos(a) * 90, y2: 95 + Math.sin(a) * 90,
+        stroke: "var(--muted)", "stroke-width": 2
+      });
+    });
+    var num = make("text", { x: 95, y: 104, "text-anchor": "middle", "class": "num" });
+    num.textContent = score;
+    var of = make("text", { x: 95, y: 126, "text-anchor": "middle", "class": "of" });
+    of.textContent = "out of 100";
+
+    window.requestAnimationFrame(function () {
+      arc.style.transition = "stroke-dasharray .8s ease";
+      arc.setAttribute("stroke-dasharray", (score / 100) * C + " " + C);
+    });
+    return svg;
+  }
+
+  function riskKind(score) { return score >= 85 ? "pass" : score >= 50 ? "med" : "high"; }
+
+  /* ---------- sections ---------- */
+  function summary(r) {
+    var s = r.security_score || {};
+    var t = r.target_info || {};
+    var score = typeof s.score === "number" ? s.score : 0;
+    var panel = el("aside", "panel summary");
+    panel.appendChild(gauge(score, riskKind(score)));
+    panel.appendChild(el("p", "risk", s.risk_level || "Unknown risk"));
+    panel.appendChild(el("p", "bands", "85 and above is low risk. Below 50 is high risk."));
+
+    var dl = el("dl", "facts");
+    [["Address", t.url], ["Status code", t.status_code], ["Server", t.server],
+     ["Content type", t.content_type], ["Redirects", t.redirects],
+     ["Response size", t.response_size === undefined ? null : t.response_size + " bytes"]
+    ].forEach(function (pair) {
+      var row = el("div");
+      row.appendChild(el("dt", null, pair[0]));
+      row.appendChild(el("dd", null, fmt(pair[1])));
+      dl.appendChild(row);
+    });
+    panel.appendChild(dl);
+
+    var actions = el("div", "actions");
+    var dl_btn = el("button", "ghost", "Download JSON report");
+    dl_btn.type = "button";
+    dl_btn.addEventListener("click", function () {
+      var blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: "application/json" });
+      var a = el("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "security-report.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    actions.appendChild(dl_btn);
+    panel.appendChild(actions);
+    return panel;
+  }
+
+  function issues(s) {
+    var sec = el("section", "block");
+    var list = s.findings || [];
+    sec.appendChild(el("h2", null, list.length ? "Problems found (" + list.length + ")" : "Problems found"));
+    if (!list.length) {
+      sec.appendChild(el("div", "empty", "No problems found in the checks this scanner runs."));
+      return sec;
+    }
+    list.forEach(function (f) {
+      var kind = String(f.severity || "low").toLowerCase();
+      var card = el("div", "finding " + kind);
+      var row = el("div", "row");
+      var title = el("div");
+      title.appendChild(pill(f.severity || "Low", kind));
+      title.appendChild(el("span", "name", f.name));
+      row.appendChild(title);
+      if (f.score_impact) row.appendChild(el("span", "impact", f.score_impact + " points"));
+      card.appendChild(row);
+      if (f.description) card.appendChild(el("p", "desc", f.description));
+      sec.appendChild(card);
+    });
+    return sec;
+  }
+
+  function passed(s) {
+    var sec = el("section", "block");
+    var list = s.positive_findings || [];
+    sec.appendChild(el("h2", null, "Checks passed (" + list.length + ")"));
+    var ul = el("ul", "passed");
+    list.forEach(function (text) { ul.appendChild(el("li", null, text)); });
+    sec.appendChild(ul);
+    return sec;
+  }
+
+  function details(r) {
+    var sec = el("section", "block");
+    sec.appendChild(el("h2", null, "Details by check"));
+
+    var headers = r.security_headers || {};
+    sec.appendChild(detail("Security headers", table(["Header", "Status", "Value"],
+      Object.keys(headers).map(function (name) {
+        var ok = headers[name].status === "Present";
+        return [name, pill(headers[name].status, ok ? "pass" : "high"), headers[name].value];
+      }))));
+
+    var tls = r.tls || {};
+    if (!Object.keys(tls).length) sec.appendChild(detail("TLS certificate", "Not checked, because the site did not use HTTPS."));
+    else if (tls.status !== "success") sec.appendChild(detail("TLS certificate", "TLS check failed: " + fmt(tls.error)));
+    else sec.appendChild(detail("TLS certificate", pairs(tls, [
+      ["tls_version", "TLS version"], ["certificate_valid", "Certificate valid"],
+      ["hostname_valid", "Hostname matches"], ["valid_from", "Valid from"], ["valid_until", "Valid until"]])));
+
+    var cookies = (r.cookies || {}).cookies || [];
+    sec.appendChild(detail("Cookies", cookies.length ? table(["Name", "Secure", "HttpOnly", "SameSite"],
+      cookies.map(function (c) { return [c.name, c.secure, c.httponly, c.samesite]; })) : "The site did not set any cookies."));
+
+    sec.appendChild(detail("Redirects", pairs(r.redirects || {}, [
+      ["redirect_count", "Redirects followed"], ["original_scheme", "Started on"],
+      ["final_scheme", "Ended on"], ["security_status", "Result"], ["final_url", "Final address"]])));
+
+    var m = r.methods || {};
+    if (m.status !== "success") sec.appendChild(detail("HTTP methods", "Could not test methods: " + fmt(m.error)));
+    else sec.appendChild(detail("HTTP methods", table(["Method", "Response", "Accepted"],
+      Object.keys(m.method_tests || {}).map(function (name) {
+        var t = m.method_tests[name];
+        return [name, t.status_code, pill(t.allowed ? "Yes" : "No", t.allowed ? "high" : "pass")];
+      }))));
+
+    sec.appendChild(detail("CORS", pairs(r.cors || {}, [
+      ["status", "Result"], ["allow_origin", "Allowed origin"],
+      ["allow_credentials", "Credentials allowed"], ["allow_methods", "Allowed methods"]])));
+
+    var rb = r.robots || {};
+    var rbBody = el("div");
+    rbBody.appendChild(pairs(rb, [["status", "Result"], ["robots_url", "File"], ["disallowed_count", "Hidden paths listed"]]));
+    if (rb.disallowed_paths && rb.disallowed_paths.length) {
+      rbBody.appendChild(el("p", "muted", "Paths the site asks crawlers to skip:"));
+      rbBody.appendChild(el("p", "mono", rb.disallowed_paths.slice(0, 20).join("   ")));
+    }
+    sec.appendChild(detail("robots.txt", rbBody));
+
+    sec.appendChild(detail("Common pages", table(["Page", "Status", "Reachable"],
+      (r.endpoints || []).map(function (e) { return [e.endpoint, e.status_code, e.reachable]; }))));
+
+    var techs = (r.technology || {}).technologies || [];
+    sec.appendChild(detail("Technology and exposed headers", techs.length ? table(["Header", "Value"],
+      techs.map(function (t) { return [t.source, t.value]; })) : "No technology was identified from the headers."));
+
+    return sec;
+  }
+
+  function render(r) {
+    resultsBox.replaceChildren();
+    var layout = el("div", "layout");
+    var main = el("div");
+    main.appendChild(issues(r.security_score || {}));
+    main.appendChild(passed(r.security_score || {}));
+    main.appendChild(details(r));
+    layout.appendChild(summary(r));
+    layout.appendChild(main);
+    resultsBox.appendChild(layout);
+    resultsBox.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+
+  function showError(message) {
+    statusBox.replaceChildren();
+    var box = el("div", "error");
+    box.appendChild(el("strong", null, "The scan didn't finish"));
+    box.appendChild(document.createTextNode(message));
+    statusBox.appendChild(box);
+  }
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var url = input.value.trim();
+    if (!url) return;
+
+    button.disabled = true;
+    button.textContent = "Scanning\u2026";
+    resultsBox.replaceChildren();
+    statusBox.replaceChildren();
+    var loading = el("div", "loading");
+    loading.appendChild(el("div", "bar"));
+    loading.appendChild(el("span", null, "Scanning " + url + ". This usually takes 10 to 40 seconds."));
+    statusBox.appendChild(loading);
+
+    fetch("/api/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: url })
+    })
+      .then(function (res) {
+        return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+      })
+      .then(function (out) {
+        if (!out.ok) { showError(out.data.error || "Something went wrong. Try again."); return; }
+        statusBox.replaceChildren();
+        lastReport = out.data;
+        render(out.data);
+      })
+      .catch(function () {
+        showError("Could not reach the scanner. Check that the app is still running.");
+      })
+      .then(function () {
+        button.disabled = false;
+        button.textContent = "Scan website";
+      });
+  });
+})();
+</script>
+</body>
+</html>
